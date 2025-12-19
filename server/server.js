@@ -7,31 +7,40 @@ dotenv.config();
 mongoose.set('debug', false);
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Health check
 app.get("/", (req, res) => {
   res.send("Backend API is running 🚀");
 });
 
-if (!process.env.MONGODB_URI) {
-  console.error('MONGODB_URI is not defined');
-  process.exit(1);
-}
+// MongoDB connection (safe for Vercel)
+let isConnected = false;
 
-mongoose.connect(process.env.MONGODB_URI)
-  .then(async () => {
-    console.log('MongoDB connected');
+async function connectDB() {
+  if (isConnected) return;
 
+  if (!process.env.MONGODB_URI) {
+    console.error('MONGODB_URI is not defined');
+    return;
+  }
+
+  try {
+    await mongoose.connect(process.env.MONGODB_URI);
+    isConnected = true;
+    console.log("MongoDB connected");
+
+    // Create default admin once
     const User = require('./models/User');
     const bcrypt = require('bcryptjs');
-    const auth = require('./middleware/auth');
 
     const adminExists = await User.findOne({ role: 'admin' });
     if (!adminExists) {
       const hashedPassword = await bcrypt.hash('admin123', 10);
-      const adminUser = new User({
+      await User.create({
         userId: 'admin001',
         email: 'admin@datamartx.com',
         password: hashedPassword,
@@ -39,16 +48,22 @@ mongoose.connect(process.env.MONGODB_URI)
         role: 'admin',
         requestedAt: new Date()
       });
-      await adminUser.save();
-      console.log('Default admin user created');
+      console.log("Default admin user created");
     }
-  })
-  .catch(err => {
-    console.error('MongoDB connection error:', err);
-    process.exit(1);
-  });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  } catch (err) {
+    console.error("MongoDB connection error:", err);
+  }
+}
+
+// Connect DB before handling requests
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
 });
+
+// Routes
+app.use("/api", require("./routes"));
+
+// 🔥 EXPORT APP (VERY IMPORTANT)
+module.exports = app;
