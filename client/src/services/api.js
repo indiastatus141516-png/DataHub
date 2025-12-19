@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_BASE_URL = (process.env.REACT_APP_API_URL || '') + '/api';
+// Normalize base URL: remove trailing slash if present and ensure we fallback to relative '/api'
+const rawBase = process.env.REACT_APP_API_URL || '';
+const normalizedBase = rawBase.replace(/\/+$|^\s+|\s+$/g, '');
+const API_BASE_URL = (normalizedBase ? `${normalizedBase.replace(/\/+$, '')}/api` : '/api');
 
 
 

@@ -51,6 +51,7 @@ const Register = () => {
           onChange={handleChange}
           margin="normal"
           required
+          autoComplete="email"
         />
         <TextField
           fullWidth
@@ -61,6 +62,7 @@ const Register = () => {
           onChange={handleChange}
           margin="normal"
           required
+          autoComplete="new-password"
         />
         <TextField
           fullWidth
@@ -71,6 +73,7 @@ const Register = () => {
           onChange={handleChange}
           margin="normal"
           required
+          autoComplete="new-password"
         />
         <Button type="submit" fullWidth variant="contained" sx={{ mt: 2 }}>
           Register
