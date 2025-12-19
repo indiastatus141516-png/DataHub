@@ -15,12 +15,19 @@ const api = axios.create({
   baseURL: API_BASE_URL,
 });
 
-// Add token to requests
+// Normalize URL to avoid duplicate slashes and add token to requests
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  // Normalize baseURL + url into a single absolute/relative url without duplicate slashes
+  if (config.baseURL) {
+    const base = String(config.baseURL).replace(/\/+$|^\s+|\s+$/g, '');
+    const urlPart = String(config.url || '').replace(/^\/+/, '');
+    config.url = base ? `${base}/${urlPart}` : `/${urlPart}`;
+    // prevent axios from resolving again against baseURL
+    delete config.baseURL;
   }
+
+  const token = localStorage.getItem('token');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
