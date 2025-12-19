@@ -48,6 +48,7 @@ const Login = () => {
           onChange={handleChange}
           margin="normal"
           required
+          autoComplete="username"
         />
         <TextField
           fullWidth
