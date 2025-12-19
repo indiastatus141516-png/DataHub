@@ -33,7 +33,25 @@ app.use(async (req, res, next) => {
 });
 
 // Routes
-app.use("/api", require("./routes"));
+try {
+  const apiRoutes = require("./routes");
+  app.use("/api", apiRoutes);
+  console.log('[server] Routes loaded successfully');
+} catch (err) {
+  console.error('[server] Failed to load routes:', err);
+  throw err;
+}
+
+// 404 handler for unmatched routes
+app.use((req, res) => {
+  res.status(404).json({ error: 'Route not found', path: req.path });
+});
+
+// Error handler middleware (must be last)
+app.use((err, req, res, next) => {
+  console.error('[server] Error:', err.message || err);
+  res.status(500).json({ error: 'Internal server error', message: err.message });
+});
 
 // 🔥 EXPORT APP (VERY IMPORTANT)
 module.exports = app;

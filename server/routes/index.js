@@ -7,42 +7,26 @@ router.get('/test', (req, res) => {
   res.json({ ok: true, message: 'API test route' });
 });
 
-// Mount existing route modules safely
-try {
-  router.use('/auth', require('./auth'));
-} catch (err) {
-  console.error('Failed to load ./auth route:', err.message);
-}
+// Mount route modules with comprehensive logging
+const routeModules = [
+  { path: '/auth', file: './auth', required: true },
+  { path: '/admin', file: './admin', required: false },
+  { path: '/data', file: './data', required: false },
+  { path: '/profile', file: './profile', required: false },
+  { path: '/purchase', file: './purchase', required: false },
+  { path: '/userData', file: './userData', required: false },
+];
 
-try {
-  router.use('/admin', require('./admin'));
-} catch (err) {
-  // Admin routes might be optional in some deployments
-  console.warn('Admin routes not loaded:', err.message);
-}
-
-try {
-  router.use('/data', require('./data'));
-} catch (err) {
-  console.warn('Data routes not loaded:', err.message);
-}
-
-try {
-  router.use('/profile', require('./profile'));
-} catch (err) {
-  console.warn('Profile routes not loaded:', err.message);
-}
-
-try {
-  router.use('/purchase', require('./purchase'));
-} catch (err) {
-  console.warn('Purchase routes not loaded:', err.message);
-}
-
-try {
-  router.use('/userData', require('./userData'));
-} catch (err) {
-  console.warn('UserData routes not loaded:', err.message);
-}
+routeModules.forEach(({ path, file, required }) => {
+  try {
+    const module = require(file);
+    router.use(path, module);
+    console.log(`[routes] Loaded ${path} from ${file}`);
+  } catch (err) {
+    const level = required ? 'error' : 'warn';
+    console[level](`[routes] Failed to load ${file} for ${path}:`, err.message);
+    if (required) throw err;
+  }
+});
 
 module.exports = router;
