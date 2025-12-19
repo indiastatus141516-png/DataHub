@@ -58,6 +58,7 @@ const Login = () => {
           onChange={handleChange}
           margin="normal"
           required
+          autoComplete="current-password"
         />
         <Button type="submit" fullWidth variant="contained" sx={{ mt: 2 }}>
           Login
