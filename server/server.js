@@ -17,48 +17,18 @@ app.get("/", (req, res) => {
   res.send("Backend API is running 🚀");
 });
 
-// MongoDB connection (safe for Vercel)
-let isConnected = false;
+// Use a serverless-friendly cached MongoDB connector
+const { connectToDatabase } = require('./utils/mongo');
 
-async function connectDB() {
-  if (isConnected) return;
-
-  if (!process.env.MONGODB_URI) {
-    console.error('MONGODB_URI is not defined');
-    return;
-  }
-
-  try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    isConnected = true;
-    console.log("MongoDB connected");
-
-    // Create default admin once
-    const User = require('./models/User');
-    const bcrypt = require('bcryptjs');
-
-    const adminExists = await User.findOne({ role: 'admin' });
-    if (!adminExists) {
-      const hashedPassword = await bcrypt.hash('admin123', 10);
-      await User.create({
-        userId: 'admin001',
-        email: 'admin@datamartx.com',
-        password: hashedPassword,
-        status: 'approved',
-        role: 'admin',
-        requestedAt: new Date()
-      });
-      console.log("Default admin user created");
-    }
-
-  } catch (err) {
-    console.error("MongoDB connection error:", err);
-  }
-}
-
-// Connect DB before handling requests
+// Connect DB before handling requests (first request will await connection)
 app.use(async (req, res, next) => {
-  await connectDB();
+  try {
+    await connectToDatabase();
+  } catch (err) {
+    console.error('Error connecting to database:', err.message || err);
+    // Do not crash the function; respond with 503 so client knows DB is unavailable
+    return res.status(503).json({ error: 'Database connection error' });
+  }
   next();
 });
 
