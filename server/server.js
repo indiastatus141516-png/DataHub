@@ -38,8 +38,10 @@ try {
   app.use("/api", apiRoutes);
   console.log('[server] Routes loaded successfully');
 } catch (err) {
-  console.error('[server] Failed to load routes:', err);
-  throw err;
+  console.error('[server] Failed to load routes:', err.message || err);
+  console.error('[server] Full error:', err);
+  // Don't throw - let the server start anyway so we can see what's happening
+  // This prevents FUNCTION_INVOCATION_FAILED from crashing the entire serverless function
 }
 
 // 404 handler for unmatched routes
