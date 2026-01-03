@@ -3,6 +3,9 @@ const path = require('path');
 
 const router = express.Router();
 
+console.log('[routes] Current directory:', __dirname);
+console.log('[routes] Routes directory:', path.join(__dirname));
+
 // Basic test route
 router.get('/test', (req, res) => {
   res.json({ ok: true, message: 'API test route' });
@@ -21,12 +24,14 @@ const routeModules = [
 routeModules.forEach(({ path: routePath, file, required }) => {
   try {
     const filePath = path.join(__dirname, file);
+    console.log(`[routes] Attempting to load ${file} from ${filePath}`);
     const module = require(filePath);
     router.use(routePath, module);
     console.log(`[routes] Loaded ${routePath} from ${file}`);
   } catch (err) {
     const level = required ? 'error' : 'warn';
     console[level](`[routes] Failed to load ${file} for ${routePath}:`, err.message);
+    console[level](`[routes] Error details:`, err.stack);
     if (required) throw err;
   }
 });
