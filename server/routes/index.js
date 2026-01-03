@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 
 const router = express.Router();
 
@@ -9,22 +10,23 @@ router.get('/test', (req, res) => {
 
 // Mount route modules with comprehensive logging
 const routeModules = [
-  { path: '/auth', file: './auth', required: true },
-  { path: '/admin', file: './admin', required: false },
-  { path: '/data', file: './data', required: false },
-  { path: '/profile', file: './profile', required: false },
-  { path: '/purchase', file: './purchase', required: false },
-  { path: '/userData', file: './userData', required: false },
+  { path: '/auth', file: 'auth.js', required: true },
+  { path: '/admin', file: 'admin.js', required: false },
+  { path: '/data', file: 'data.js', required: false },
+  { path: '/profile', file: 'profile.js', required: false },
+  { path: '/purchase', file: 'purchase.js', required: false },
+  { path: '/userData', file: 'userData.js', required: false },
 ];
 
-routeModules.forEach(({ path, file, required }) => {
+routeModules.forEach(({ path: routePath, file, required }) => {
   try {
-    const module = require(file);
-    router.use(path, module);
-    console.log(`[routes] Loaded ${path} from ${file}`);
+    const filePath = path.join(__dirname, file);
+    const module = require(filePath);
+    router.use(routePath, module);
+    console.log(`[routes] Loaded ${routePath} from ${file}`);
   } catch (err) {
     const level = required ? 'error' : 'warn';
-    console[level](`[routes] Failed to load ${file} for ${path}:`, err.message);
+    console[level](`[routes] Failed to load ${file} for ${routePath}:`, err.message);
     if (required) throw err;
   }
 });
