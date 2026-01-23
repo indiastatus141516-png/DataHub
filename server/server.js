@@ -39,15 +39,21 @@ app.get("/api/test", (req, res) => {
 const { connectToDatabase } = require('./utils/mongo');
 
 // Connect DB before handling requests (first request will await connection)
+// Log errors but don't block - let endpoints handle DB availability
 app.use(async (req, res, next) => {
   try {
     await connectToDatabase();
+    next();
   } catch (err) {
     console.error('Error connecting to database:', err.message || err);
-    // Do not crash the function; respond with 503 so client knows DB is unavailable
+    // For public endpoints (health, test, auth), continue anyway
+    // They might fail but should return proper error from their handler
+    if (req.path.includes('/health') || req.path.includes('/test') || req.path.includes('/auth')) {
+      return next(); // Let auth endpoints try to proceed
+    }
+    // For protected endpoints, return 503
     return res.status(503).json({ error: 'Database connection error' });
   }
-  next();
 });
 
 // Routes
