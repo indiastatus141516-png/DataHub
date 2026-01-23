@@ -1,12 +1,25 @@
 import axios from 'axios';
 
-// Build base URL safely to avoid duplicate slashes. If REACT_APP_API_URL is not set, use relative '/api'.
+// Build base URL safely to avoid duplicate slashes
+// If REACT_APP_API_URL is set, it should already include /api or be the base backend URL
+// If not set, default to relative /api for same-origin requests
 const rawBase = (process.env.REACT_APP_API_URL || '').trim();
-let API_BASE_URL = '/api';
+let API_BASE_URL;
+
 if (rawBase) {
+  // Remove trailing slashes
   let base = rawBase;
   while (base.endsWith('/')) base = base.slice(0, -1);
-  API_BASE_URL = base + '/api';
+  
+  // Check if it already has /api in it
+  if (base.includes('/api')) {
+    API_BASE_URL = base;
+  } else {
+    API_BASE_URL = base + '/api';
+  }
+} else {
+  // Use relative path for same-origin
+  API_BASE_URL = '/api';
 }
 
 

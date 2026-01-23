@@ -56,4 +56,6 @@ app.use((err, req, res, next) => {
 });
 
 // 🔥 EXPORT APP (VERY IMPORTANT)
+// For Vercel serverless, we need to export the app as both default and handler
 module.exports = app;
+module.exports.default = app;
