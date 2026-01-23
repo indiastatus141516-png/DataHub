@@ -15,11 +15,20 @@ const router = express.Router();
 // Initialize cache with 5 minutes TTL
 const cache = new NodeCache({ stdTTL: 300 });
 
-// Initialize Razorpay
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+// Initialize Razorpay (gracefully handle missing credentials)
+let razorpay = null;
+if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+  try {
+    razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+  } catch (err) {
+    console.warn('[purchase] Razorpay initialization failed:', err.message);
+  }
+} else {
+  console.warn('[purchase] Razorpay credentials not configured');
+}
 
 // Create purchase request with transaction and caching
 router.post('/request', auth, async (req, res) => {
@@ -151,6 +160,14 @@ router.get('/purchased', auth, async (req, res) => {
 // Generate Razorpay order with improved validation and caching
 router.post('/payment', auth, async (req, res) => {
   try {
+    // Check if Razorpay is configured
+    if (!razorpay) {
+      return res.status(503).json({ 
+        message: 'Payment service not configured',
+        error: 'Razorpay credentials are missing' 
+      });
+    }
+
     const { requestId } = req.body;
 
     if (!requestId) {

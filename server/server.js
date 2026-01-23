@@ -12,9 +12,27 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check
+// Health check (before DB middleware)
 app.get("/", (req, res) => {
   res.send("Backend API is running 🚀");
+});
+
+// Test routes (before DB middleware - no DB dependency)
+app.get("/api/health", (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    message: 'Backend API is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get("/api/test", (req, res) => {
+  res.json({ 
+    ok: true, 
+    message: 'API test route',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
 });
 
 // Use a serverless-friendly cached MongoDB connector
@@ -58,4 +76,3 @@ app.use((err, req, res, next) => {
 // 🔥 EXPORT APP (VERY IMPORTANT)
 // For Vercel serverless, we need to export the app as both default and handler
 module.exports = app;
-module.exports.default = app;
