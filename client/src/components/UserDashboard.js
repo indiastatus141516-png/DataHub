@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import {
   Container, Typography, Grid, Card, CardContent, Button,
-  Select, MenuItem, FormControl, InputLabel, Alert, Table,
+  Select, MenuItem, FormControl, InputLabel, Table,
   TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField,
   Box, Avatar, Chip, IconButton, Divider, Badge,
   Tabs, Tab, AppBar, InputAdornment, Toolbar, Drawer, List,
@@ -43,13 +43,10 @@ const UserDashboard = () => {
   const [requests, setRequests] = useState([]);
   const [purchased, setPurchased] = useState([]);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [currentView, setCurrentView] = useState('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
-  const [searchTypeRequests, setSearchTypeRequests] = useState('category');
-  const [searchTypePurchased, setSearchTypePurchased] = useState('category');
+  
   const [activeTab, setActiveTab] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [profile, setProfile] = useState({});
@@ -61,7 +58,7 @@ const UserDashboard = () => {
   // Generate next 6 weeks' Monday-Friday ranges
   const [selectedCategoryForWeek, setSelectedCategoryForWeek] = useState('');
   const [reorderDialogOpen, setReorderDialogOpen] = useState(false);
-  const [completedDeliveries, setCompletedDeliveries] = useState([]);
+  
   const [dailyQuantities, setDailyQuantities] = useState({ mon: 0, tue: 0, wed: 0, thu: 0, fri: 0 });
   const [hasShownReorderDialog, setHasShownReorderDialog] = useState(false);
   const [confirmationDialogOpen, setConfirmationDialogOpen] = useState(false);
@@ -125,7 +122,6 @@ const UserDashboard = () => {
       if (endDate) params.endDate = endDate;
       const res = await dataAPI.getDailyRequirements(Object.keys(params).length ? params : undefined);
       setDailyRequirementsState(res.data.requirements || {});
-      setDailyRequirementsDates(res.data.dates || {});
     } catch (err) {
       // not fatal for users
     }
@@ -139,7 +135,6 @@ const UserDashboard = () => {
   }, [selectedWeek]);
 
   const [dailyRequirementsState, setDailyRequirementsState] = useState({});
-  const [dailyRequirementsDates, setDailyRequirementsDates] = useState({});
   const [downloadedButtons, setDownloadedButtons] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('downloadedButtons') || '{}');
@@ -209,6 +204,8 @@ const UserDashboard = () => {
 
     try {
       await Promise.all(promises);
+      // update state so UI reflects availability probing
+      setRequestDayAvailability(next);
     } catch (e) {
       // ignore - individual promises set availability
     }
@@ -246,15 +243,7 @@ const UserDashboard = () => {
     }
   };
 
-  const getPreviousFriday = () => {
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const daysSinceFriday = (dayOfWeek + 2) % 7; // Calculate days back to previous Friday
-    const previousFriday = new Date(today);
-    previousFriday.setDate(today.getDate() - daysSinceFriday);
-    previousFriday.setHours(0, 0, 0, 0);
-    return previousFriday;
-  };
+  // removed unused getPreviousFriday helper
 
   const checkForReorderNotification = () => {
     // Simple check: if there are purchased items and today is after Friday, show reorder dialog
@@ -298,24 +287,17 @@ const UserDashboard = () => {
     }
   };
 
-  const handleCategoryChange = async (category) => {
-    setSelectedCategory(category);
-    try {
-      const response = await dataAPI.getPreview(category);
-      setPreview(response.data);
-    } catch (err) {
-      showToast('Failed to load preview', 'error');
-    }
-  };
+  // handleCategoryChange removed; single-request ordering will call handlePurchaseRequest(category)
 
-  const handlePurchaseRequest = async () => {
-    if (!selectedCategory) {
+  const handlePurchaseRequest = async (categoryArg) => {
+    const categoryToUse = categoryArg || selectedCategory;
+    if (!categoryToUse) {
       showToast('Please select a category', 'error');
       return;
     }
 
     try {
-      const res = await purchaseAPI.createRequest({ category: selectedCategory, quantity });
+      const res = await purchaseAPI.createRequest({ category: categoryToUse, quantity });
       const available = res.data?.availableCount;
       if (available === 0) {
         showToast('Purchase request submitted and queued — admin has not uploaded data yet', 'success');
@@ -330,17 +312,16 @@ const UserDashboard = () => {
 
   const handlePayment = async (requestId) => {
     try {
-      // Directly mark payment as successful (skip payment gateway for now)
       await purchaseAPI.confirmPayment({
         requestId: requestId,
-        paymentId: `demo_${Date.now()}`, // Demo payment ID
-        signature: 'demo_signature', // Demo signature
+        paymentId: `demo_${Date.now()}`,
+        signature: 'demo_signature',
       });
       showToast('Payment successful! Data has been added to your account.', 'success');
-      loadRequests();
-      loadPurchased();
+      await loadRequests();
+      await loadPurchased();
     } catch (err) {
-      setError('Payment processing failed');
+      showToast('Payment processing failed', 'error');
     }
   };
 
@@ -444,8 +425,6 @@ const UserDashboard = () => {
     setSearchTerm('');
     setStatusFilter('all');
     setDateFilter('all');
-    setSearchTypeRequests('category');
-    setSearchTypePurchased('category');
   };
 
   const toggleDrawer = () => {
@@ -457,7 +436,6 @@ const UserDashboard = () => {
   };
 
   const handleDrawerItemClick = (view) => {
-    setCurrentView(view);
     setDrawerOpen(false);
     if (view === 'logout') {
       logout();
@@ -869,6 +847,11 @@ const UserDashboard = () => {
                                 }
                               }}
                               startIcon={<ShoppingCartIcon />}
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                // create a single purchase request for this category
+                                await handlePurchaseRequest(category.name);
+                              }}
                             >
                               Order Now
                             </Button>
@@ -1245,6 +1228,19 @@ const UserDashboard = () => {
                                     })}
                                   </Box>
                                 )}
+                                {req.status === 'pending' && (
+                                  <Button
+                                    size="small"
+                                    variant="contained"
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      await handlePayment(req._id);
+                                    }}
+                                    sx={{ borderRadius: 2 }}
+                                  >
+                                    Pay
+                                  </Button>
+                                )}
                               </TableCell>
                             </TableRow>
                           ))
@@ -1371,7 +1367,7 @@ const UserDashboard = () => {
                   )}
                 </Box>
                 }
-                // {/* Profile Tab */}
+                {/* Profile Tab */}
                 {activeTab === 4 && <Box sx={{ p: 3 }}>
                   <Typography variant="h5" sx={{ mb: 4, fontWeight: 'bold', color: 'primary.main' }}>
                     Profile Settings
