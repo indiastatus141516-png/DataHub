@@ -873,7 +873,7 @@ const UserDashboard = () => {
                               }}
                               startIcon={<ShoppingCartIcon />}
                            
-                              }}
+                              
                             >
                               Order Now
                             </Button>
